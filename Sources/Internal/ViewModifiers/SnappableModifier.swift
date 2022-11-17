@@ -1,20 +1,22 @@
 import SwiftUI
 
-internal struct SnappableModifier: ViewModifier {
+internal struct SnappableModifier<ID>: ViewModifier {
   private let snapAlignment: SnapAlignment
   private let snapMode: SnapMode
   private let draggingDetector: DraggingDetector
   private let coordinateSpaceName: UUID
+    private let selectedSnapID : ((_ selected: ID) -> ())?
 
   @State private var parentAnchor: CGPoint = .zero
   @State private var childSnapAnchors: [SnapID: CGPoint] = [:]
   @State private var snapCandidateID: SnapID?
 
-  internal init(alignment: SnapAlignment, mode: SnapMode) {
+    internal init(alignment: SnapAlignment, mode: SnapMode, selectedSnapId: ((_ selected: ID) -> ())?) {
     self.snapAlignment = alignment
     self.snapMode = mode
     self.draggingDetector = DraggingDetector(snapMode: mode)
     self.coordinateSpaceName = UUID()
+    self.selectedSnapID = selectedSnapId
   }
 
   internal func body(content: Content) -> some View {
@@ -36,6 +38,12 @@ internal struct SnappableModifier: ViewModifier {
             return Color.clear
           }
         )
+        .onChange(of: snapCandidateID, perform: { newValue in
+            if let selectedSnapIDCallback = self.selectedSnapID {
+                selectedSnapIDCallback(snapCandidateID as! ID)
+            }
+            
+        })
         .onPreferenceChange(SnapAnchorPreferenceKey.self) { anchors in
           childSnapAnchors = anchors
 
